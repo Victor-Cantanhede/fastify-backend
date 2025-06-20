@@ -5,21 +5,33 @@ interface ParamsType {
     id: number;
 }
 
+interface TaskInput {
+    title: string;
+    description: string;
+    term: Date;
+}
+
 const prisma = new PrismaClient();
 
 /*=======================CREATE TASK=======================*/
 export async function createTask(req: FastifyRequest, res: FastifyReply) {
-    const { title, description, term, status, userId } = req.body as {
-        title: string;
-        description: string;
-        term: Date;
-        status: boolean;
-        userId: number;
-    };
+    const user = req.user?.id as number;
+
+    const { title, description, term } = req.body as TaskInput;
+
+    if (!title || !description || !term) {
+        return res.code(400).send({ message: 'Preencha todos os campos!' });
+    }
 
     try {
         const task = await prisma.task.create({
-            data: { title, description, term: new Date(term), status, userId }
+            data: {
+                title,
+                description,
+                term: new Date(term),
+                status: true,
+                userId: user
+            }
         });
         res.code(201).send({ message: 'Tarefa cadastrada com sucesso!' });
 
@@ -30,18 +42,24 @@ export async function createTask(req: FastifyRequest, res: FastifyReply) {
 
 /*=======================GET TASK=======================*/
 export async function getAllTasks(req: FastifyRequest, res: FastifyReply) {
-    const tasks = await prisma.task.findMany();
+    const user = req.user?.id as number;
+
+    const tasks = await prisma.task.findMany({
+        where: { userId: user }
+    });
     res.send(tasks);
 }
 
 /*=======================UPDATE TASK=======================*/
 export async function updateTask(req: FastifyRequest<{ Params: ParamsType }>, res: FastifyReply) {
+    const user = req.user?.id as number;
+
     const id = req.params.id;
-    const data = req.body as any;
+    const data = req.body as TaskInput;
 
     try {
         const updated = await prisma.task.update({
-            where: { id }, data
+            where: { id, userId: user }, data
         });
         res.send({ message: 'Tarefa atualizada com sucesso!' });
 
@@ -52,10 +70,11 @@ export async function updateTask(req: FastifyRequest<{ Params: ParamsType }>, re
 
 /*=======================DELETE TASK=======================*/
 export async function deleteTask(req: FastifyRequest<{ Params: ParamsType }>, res: FastifyReply) {
+    const user = req.user?.id as number;
     const id = req.params.id;
 
     try {
-        await prisma.task.delete({ where: { id } });
+        await prisma.task.delete({ where: { id, userId: user } });
         res.code(204).send({ message: 'Tarefa deletada com sucesso!' });
 
     } catch (error) {
