@@ -75,7 +75,7 @@ export async function deleteTask(req: FastifyRequest<{ Params: ParamsType }>, re
 
     try {
         await prisma.task.delete({ where: { id, userId: user } });
-        res.code(204).send({ message: 'Tarefa deletada com sucesso!' });
+        res.code(200).send({ message: 'Tarefa deletada com sucesso!' });
 
     } catch (error) {
         res.code(500).send({ message: 'Erro ao atualizar tarefa!', error: error as Error });
