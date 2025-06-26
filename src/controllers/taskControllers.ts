@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../database/db';
 
 interface ParamsType {
     id: number;
@@ -10,8 +10,6 @@ interface TaskInput {
     description: string;
     term: Date;
 }
-
-const prisma = new PrismaClient();
 
 /*=======================CREATE TASK=======================*/
 export async function createTask(req: FastifyRequest, res: FastifyReply) {

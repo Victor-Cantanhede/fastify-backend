@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../database/db';
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -9,8 +9,6 @@ interface IUser {
     email: string;
     password: string;
 }
-
-const prisma = new PrismaClient();
 
 /*=======================CREATE USER=======================*/
 export async function createUser(req: FastifyRequest, res: FastifyReply) {
