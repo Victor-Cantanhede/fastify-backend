@@ -3,6 +3,13 @@ import { prisma } from '../lib/database/db';
 import { createTaskSchema, updateTaskSchema } from '../schemas/taskSchema';
 import { zod, handleZodError } from '../lib/validations/zod';
 
+
+interface ITaskInputs {
+    title: string;
+    description: string;
+    term: Date;
+}
+
 interface ParamsType {
     id: number;
 }
@@ -24,7 +31,7 @@ export async function createTask(req: FastifyRequest, res: FastifyReply) {
         return res.code(400).send(handleZodError(parsed.error));
     }
 
-    const { title, description, term } = parsed.data;
+    const { title, description, term } = parsed.data as ITaskInputs;
 
     try {
         const newTask = await prisma.task.create({
@@ -77,7 +84,7 @@ export async function updateTask(req: FastifyRequest<{ Params: ParamsType }>, re
 
     const userId = req.user.id;
     const id = req.params.id;
-    const { title, description, term } = parsed.data;
+    const { title, description, term } = parsed.data as ITaskInputs;
 
     try {
         const updatedTask = await prisma.task.update({
