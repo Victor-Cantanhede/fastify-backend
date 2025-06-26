@@ -1,37 +1,42 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { prisma } from '../database/db';
+import { prisma } from '../lib/database/db';
+import { createTaskSchema, updateTaskSchema } from '../schemas/taskSchema';
+import { zod, handleZodError } from '../lib/validations/zod';
 
 interface ParamsType {
     id: number;
 }
 
-interface TaskInput {
-    title: string;
-    description: string;
-    term: Date;
-}
+const paramsSchema = zod.object({
+    id: zod.number().int().positive()
+});
 
 /*=======================CREATE TASK=======================*/
 export async function createTask(req: FastifyRequest, res: FastifyReply) {
-    const user = req.user?.id as number;
-
-    const { title, description, term } = req.body as TaskInput;
-
-    if (!title || !description || !term) {
-        return res.code(400).send({ message: 'Preencha todos os campos!' });
+    if (!req.user) {
+        return res.code(401).send({ message: 'Usuário não autenticado!' });
     }
 
+    const user = req.user.id as number;
+    const parsed = createTaskSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+        return res.code(400).send(handleZodError(parsed.error));
+    }
+
+    const { title, description, term } = parsed.data;
+
     try {
-        const task = await prisma.task.create({
+        const newTask = await prisma.task.create({
             data: {
                 title,
                 description,
-                term: new Date(term),
+                term,
                 status: true,
                 userId: user
             }
         });
-        res.code(201).send({ message: 'Tarefa cadastrada com sucesso!' });
+        res.code(201).send({ message: 'Tarefa cadastrada com sucesso!', newTask });
 
     } catch (error) {
         res.code(500).send({ message: 'Erro ao cadastrar tarefa!', error: error as Error });
@@ -40,8 +45,12 @@ export async function createTask(req: FastifyRequest, res: FastifyReply) {
 
 /*=======================GET TASK=======================*/
 export async function getAllTasks(req: FastifyRequest, res: FastifyReply) {
-    const user = req.user?.id as number;
+    if (!req.user) {
+        return res.code(401).send({ message: 'Usuário não autenticado!' });
+    }
 
+    const user = req.user.id as number;
+    
     const tasks = await prisma.task.findMany({
         where: { userId: user }
     });
@@ -50,16 +59,32 @@ export async function getAllTasks(req: FastifyRequest, res: FastifyReply) {
 
 /*=======================UPDATE TASK=======================*/
 export async function updateTask(req: FastifyRequest<{ Params: ParamsType }>, res: FastifyReply) {
-    const user = req.user?.id as number;
+    if (!req.user) {
+        return res.code(401).send({ message: 'Usuário não autenticado!' });
+    }
 
+    const parsedParams = paramsSchema.safeParse(req.params);
+    
+    if (!parsedParams.success) {
+        return res.code(400).send({ message: 'ID inválido!', errors: parsedParams.error.flatten().fieldErrors });
+    }
+    
+    const parsed = updateTaskSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+        return res.code(400).send(handleZodError(parsed.error));
+    }
+
+    const userId = req.user.id;
     const id = req.params.id;
-    const data = req.body as TaskInput;
+    const { title, description, term } = parsed.data;
 
     try {
-        const updated = await prisma.task.update({
-            where: { id, userId: user }, data
+        const updatedTask = await prisma.task.update({
+            where: { id, userId: userId },
+            data: { title, description, term }
         });
-        res.send({ message: 'Tarefa atualizada com sucesso!' });
+        res.send({ message: 'Tarefa atualizada com sucesso!', updatedTask });
 
     } catch (error) {
         res.code(500).send({ message: 'Erro ao atualizar tarefa!', error: error as Error });
@@ -68,12 +93,22 @@ export async function updateTask(req: FastifyRequest<{ Params: ParamsType }>, re
 
 /*=======================DELETE TASK=======================*/
 export async function deleteTask(req: FastifyRequest<{ Params: ParamsType }>, res: FastifyReply) {
-    const user = req.user?.id as number;
+    if (!req.user) {
+        return res.code(401).send({ message: 'Usuário não autenticado!' });
+    }
+
+    const parsedParams = paramsSchema.safeParse(req.params);
+    
+    if (!parsedParams.success) {
+        return res.code(400).send(handleZodError(parsedParams.error));
+    }
+
+    const userId = req.user.id;
     const id = req.params.id;
 
     try {
-        await prisma.task.delete({ where: { id, userId: user } });
-        res.code(200).send({ message: 'Tarefa deletada com sucesso!' });
+        const deletedTask = await prisma.task.delete({ where: { id, userId: userId } });
+        res.code(204).send({ message: 'Tarefa deletada com sucesso!', deletedTask });
 
     } catch (error) {
         res.code(500).send({ message: 'Erro ao atualizar tarefa!', error: error as Error });

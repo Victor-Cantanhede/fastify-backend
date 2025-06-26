@@ -1,18 +1,19 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { prisma } from '../database/db';
+import { prisma } from '../lib/database/db';
+import { createUserSchema, loginSchema } from '../schemas/userSchema';
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-interface IUser {
-    id: number;
-    name: string;
-    email: string;
-    password: string;
-}
 
 /*=======================CREATE USER=======================*/
-export async function createUser(req: FastifyRequest, res: FastifyReply) {
-    const { name, email, password } = req.body as IUser;
+export async function createUser(req: FastifyRequest, res: FastifyReply) {    
+    const parsed = createUserSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+        return res.code(400).send({ message: 'Dados inválidos!', errors: parsed.error.flatten().fieldErrors });
+    }
+
+    const { name, email, password } = parsed.data;
 
     try {
         const hashedPassword = await bcryptjs.hash(password, 10);
@@ -29,7 +30,13 @@ export async function createUser(req: FastifyRequest, res: FastifyReply) {
 
 /*=======================AUTH LOGIN=======================*/
 export async function authLogin(req: FastifyRequest, res: FastifyReply) {
-    const { email, password } = req.body as IUser;
+    const parsed = loginSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+        return res.code(400).send({ message: 'Dados inválidos!', errors: parsed.error.flatten().fieldErrors });
+    }
+
+    const { email, password } = parsed.data;
 
     try {
         const user = await prisma.user.findUnique({
