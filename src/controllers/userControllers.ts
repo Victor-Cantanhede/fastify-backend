@@ -65,7 +65,7 @@ export async function authLogin(req: FastifyRequest, res: FastifyReply) {
             sameSite: 'strict',
             path: '/',
             maxAge: 60 * 60 * 24 // 1 dia
-        }).send({ message: 'Login efetuado com sucesso!' });
+        }).send({ message: 'Login efetuado com sucesso!', token });
 
     } catch (error) {
         res.code(500).send({ message: 'Erro ao realizar login!', error: error as Error });

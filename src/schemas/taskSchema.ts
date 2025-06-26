@@ -5,7 +5,9 @@ const baseTaskSchema = zod.object({
     id: zod.number(),
     title: zod.string().min(3, 'O título deve ter no mínimo 3 caracteres!').max(30, 'O título deve ter no máximo 30 caracteres!'),
     description: zod.string().min(3, 'A descrição deve ter no mínimo 3 caracteres!').max(1500, 'A descrição deve ter no máximo 1500 caracteres!'),
-    term: zod.date().refine((date) => date > new Date(), { message: 'A data do prazo deve ser no futuro!' })
+    term: zod.string()
+        .refine((val) => !isNaN(Date.parse(val)), { message: 'Data inválida!' })
+        .transform((val) => new Date(val))
 });
 
 // CREATE
